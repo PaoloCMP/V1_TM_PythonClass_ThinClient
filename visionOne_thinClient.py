@@ -105,7 +105,8 @@ class visionOne:
                         f"\t- OS info: {os_info}\n"
                         f"\t- Policy name: {policy_name}\n"
                         f"\t- Protection Manager: {protection_manager}\n"
-                        f"\n"   
+                        f"\n"
+                        f"\t- Get more detail for this result --> https://threat-connect-app.srv.sogei.it/api/playbook/visionOne_soar?action=get_detailedInfoForEndpoint&value={agent_guid}\n"     
                         f"\n"    
                         )
                 formatted_output.append(entry)          
@@ -125,7 +126,10 @@ class visionOne:
                         f"\t- AgentGuid: {agent_guid}\n"
                         f"\t- Login Account: {login_account}\n"
                         f"\t- Nome Host: {endpoint_name}\n"   
-                        f"\n"               
+                        f"\n"
+                        f"\t- Isola host\n\tlink --> https://threat-connect-app.srv.sogei.it/api/playbook/visionOne_soar?action=isolate&value={agent_guid}\n"
+                        f"\t- Ripristina host\n\tlink --> https://threat-connect-app.srv.sogei.it/api/playbook/visionOne_soar?action=restore&value={agent_guid}\n"                  
+                        
                         )
                 formatted_output.append(entry)          
 
@@ -305,19 +309,58 @@ class visionOne:
     
     #Workbench change status
     
-    def workbench_change_status(self, workbenchID, status):        
+    def get_workbench_etag(self, workbenchID):        
         '''
-        API in TMV1 doc: Workbench -> Modify alert status        
-        '''
+        API in TMV1 doc: Workbench -> Get alert details        
         
+        Method needed because to change the WB status we have to pass the ETag value
+        that we can get only from the headers of the 'Get alert detail' response
+        '''
+        output_param = []
         url_path = '/v3.0/workbench/alerts/{id}'
         url_path = url_path.format(**{'id': workbenchID})       
 
         query_params = {}
         headers = {
             'Authorization': 'Bearer ' + self.token,
+        }
+        
+        try:
+            r = requests.get(self.baseUrl + url_path, params=query_params, headers=headers, timeout=visionOne.timeout, proxies=self.proxy)
+            
+            etag = r.headers.get("ETag", "W/'Unknown'")[2:] #we need only the substring
+            
+            output_response_parsed = self.parse_output(r)
+            WB_link = output_response_parsed[1].get("workbenchLink","https://portal.eu.xdr.trendmicro.com/index.html#/workbench/alerts/" + workbenchID)
+                    
+        except Exception as e:
+            etag = "Error getting ETag for workbench {}: headers -> {}".format(workbenchID, r.headers)
+            WB_link = "https://portal.eu.xdr.trendmicro.com/index.html#/workbench/alerts/" + workbenchID
+
+
+        output_param.append(etag)
+        output_param.append(WB_link)
+
+        return output_param
+
+    def workbench_change_status(self, workbenchID, status):        
+        '''
+        API in TMV1 doc: Workbench -> Modify alert status        
+        '''
+        
+        url_path = '/v3.0/workbench/alerts/{id}'
+        url_path = url_path.format(**{'id': workbenchID})
+
+        buff = self.get_workbench_etag(workbenchID)
+        etag = buff[0]
+        wb_link = buff[1]
+           
+
+        query_params = {}
+        headers = {
+            'Authorization': 'Bearer ' + self.token,
             'Content-Type': 'application/json;charset=utf-8',
-            #'If-Match': 'YOUR_IF-MATCH (string)'
+            'If-Match': etag
         }
         body = {
             'status': status,
@@ -330,15 +373,15 @@ class visionOne:
             
             if (result[0] == 204):                
                 #handle correct but empty response
-                info = "Vision One Workbench {} status changed to {}".format(workbenchID, status)
+                info = "Vision One Workbench {} status changed to {}\n\nWorkbench link: {}".format(workbenchID, status, wb_link)
                 exit_code = result[0]
                 
             else:
                 exit_code = result[0]
-                info = result[1]
+                info = result[1] + "\n\nWorkbench link: {}".format(wb_link)
         
         except Exception as e:
-            info = "Error updating workbench {} status to {}".format(workbenchID, status)
+            info = "Error updating workbench {} status to {}\n\nWorkbench link: {}".format(workbenchID, status, wb_link)
             exit_code = -1            
                
         return [exit_code, info]
