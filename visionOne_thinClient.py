@@ -21,7 +21,9 @@ class visionOne:
                     baseURL : str
                             URL to TrendMicro VisionOne platform
                     token : str
-                            Authentication parameter        
+                            Authentication parameter    
+                    proxy : str
+                            Web proxy to use
         """
         self.baseUrl = baseURL 
         self.token = token
@@ -106,7 +108,7 @@ class visionOne:
                         f"\t- Policy name: {policy_name}\n"
                         f"\t- Protection Manager: {protection_manager}\n"
                         f"\n"
-                        f"\t- Get more detail for this result --> https://threat-connect-app.srv.sogei.it/api/playbook/visionOne_soar?action=get_detailedInfoForEndpoint&value={agent_guid}\n"     
+                        f"\t- Get more detail for this result --> https://<url>/api/playbook/visionOne_soar?action=get_detailedInfoForEndpoint&value={agent_guid}\n"     
                         f"\n"    
                         )
                 formatted_output.append(entry)          
@@ -127,8 +129,8 @@ class visionOne:
                         f"\t- Login Account: {login_account}\n"
                         f"\t- Nome Host: {endpoint_name}\n"   
                         f"\n"
-                        f"\t- Isola host\n\tlink --> https://threat-connect-app.srv.sogei.it/api/playbook/visionOne_soar?action=isolate&value={agent_guid}\n"
-                        f"\t- Ripristina host\n\tlink --> https://threat-connect-app.srv.sogei.it/api/playbook/visionOne_soar?action=restore&value={agent_guid}\n"                  
+                        f"\t- Isola host\n\tlink --> https://<url>/api/playbook/visionOne_soar?action=isolate&value={agent_guid}\n"
+                        f"\t- Ripristina host\n\tlink --> https://<url>/api/playbook/visionOne_soar?action=restore&value={agent_guid}\n"                  
                         
                         )
                 formatted_output.append(entry)          
