@@ -21,9 +21,9 @@ class visionOne:
                     baseURL : str
                             URL to TrendMicro VisionOne platform
                     token : str
-                            Authentication parameter    
+                            Authentication parameter
                     proxy : str
-                            Web proxy to use
+                            Web proxy to use        
         """
         self.baseUrl = baseURL 
         self.token = token
@@ -98,6 +98,19 @@ class visionOne:
                 policy_name = item.get("policyName", "")
                 protection_manager = item.get("protectionManager", "")
                 ip_visionone = item.get("ip", {}).get("value", "")
+
+                #Check if some values are corrupted
+                fields = {
+                    "AgentGuid": agent_guid,
+                    "Login Account": login_account,
+                    "Endpoint Name": endpoint_name,
+                    "OS info": os_info,
+                    "Policy name": policy_name,
+                    "Protection Manager": protection_manager,
+                    "IP": ip_visionone
+                }
+                invalid_fields = [key for key, value in fields.items() if value in ("", "N/A")]
+               
                 
                 entry = (f"Result {idx}\n"
                         f"\t- AgentGuid: {agent_guid}\n"
@@ -107,10 +120,14 @@ class visionOne:
                         f"\t- OS info: {os_info}\n"
                         f"\t- Policy name: {policy_name}\n"
                         f"\t- Protection Manager: {protection_manager}\n"
-                        f"\n"
-                        f"\t- Get more detail for this result --> https://<url>/api/playbook/visionOne_soar?action=get_detailedInfoForEndpoint&value={agent_guid}\n"     
-                        f"\n"    
+                        f"\n"  
                         )
+
+                if invalid_fields:
+                    message = f"\tWARNING:\n\tRilevata anomalia sull'inventory endpoint dell'agent per i campi [{', '.join(invalid_fields)}].\n\tSi consiglia di verificare</a>."
+                    entry += message
+
+                        
                 formatted_output.append(entry)          
 
             return "\n".join(formatted_output)
@@ -129,8 +146,8 @@ class visionOne:
                         f"\t- Login Account: {login_account}\n"
                         f"\t- Nome Host: {endpoint_name}\n"   
                         f"\n"
-                        f"\t- Isola host\n\tlink --> https://<url>/api/playbook/visionOne_soar?action=isolate&value={agent_guid}\n"
-                        f"\t- Ripristina host\n\tlink --> https://<url>/api/playbook/visionOne_soar?action=restore&value={agent_guid}\n"                  
+                        f"\t- Isola host\n\tlink --> <a href='https://url?action=isolate&value={agent_guid}' target='_blank'>Isolate</a>\n"
+                        f"\t- Ripristina host\n\tlink --> <a href='https://url?action=restore&value={agent_guid}' target='_blank'>Restore</a>\n"                  
                         
                         )
                 formatted_output.append(entry)          
@@ -375,7 +392,7 @@ class visionOne:
             
             if (result[0] == 204):                
                 #handle correct but empty response
-                info = "Vision One Workbench {} status changed to {}\n\nWorkbench link: {}".format(workbenchID, status, wb_link)
+                info = "Vision One Workbench {} status changed to {}\n\nWorkbench link: <a href='{}' target='_blank'>Link</a>".format(workbenchID, status, wb_link)
                 exit_code = result[0]
                 
             else:
