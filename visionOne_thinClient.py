@@ -2,7 +2,7 @@ import requests #third-party module
 import json
 import re
 
-class visionOne:
+class VisionOne:
 
     '''
     Author: Paolo Campus, Deloitte
@@ -14,26 +14,27 @@ class visionOne:
 
        
 
-    def __init__(self, baseURL, token, proxy):    
+    def __init__(self, base_url, token, proxy):    
         """
             Constructor Method
                 Input:
-                    baseURL : str
+                    base_url : str
                             URL to TrendMicro VisionOne platform
                     token : str
                             Authentication parameter
                     proxy : str
                             Web proxy to use        
         """
-        self.baseUrl = baseURL 
+        self.base_url = base_url 
         self.token = token
         self.proxy = proxy
-               
+
+        self.bearer = "Bearer "  
 
         #Other parameters used during POST request 
         self.query_params = {}
         self.headers = {
-            'Authorization': 'Bearer ' + self.token,
+            'Authorization': self.bearer + self.token,
             'Content-Type': 'application/json;charset=utf-8'
         }
 
@@ -42,7 +43,7 @@ class visionOne:
         
         try:
             
-            r = requests.post(self.baseUrl + url_path, params=self.query_params, headers=self.headers, json=body, timeout=visionOne.timeout, proxies=self.proxy)
+            r = requests.post(self.base_url + url_path, params=self.query_params, headers=self.headers, json=body, timeout=VisionOne.timeout, proxies=self.proxy)
         
         except Exception as e:
             r = "Error during Post request: " + str(e)
@@ -83,8 +84,8 @@ class visionOne:
 
         return analyst_input_type
 
-    #function used to format the response from 'get_infoFromIP'
-    def __format_infoFromIP(self, response, case_param):
+    #function used to format the response from 'get_info_from_ip'
+    def format_info_from_ip(self, response, case_param):
         formatted_output = []
 
         if (case_param == "info"):  
@@ -97,7 +98,7 @@ class visionOne:
                 os_info = item.get("osDescription", "")
                 policy_name = item.get("policyName", "")
                 protection_manager = item.get("protectionManager", "")
-                ip_visionone = item.get("ip", {}).get("value", "")
+                ip_vision_one = item.get("ip", {}).get("value", "")
 
                 #Check if some values are corrupted
                 fields = {
@@ -107,7 +108,7 @@ class visionOne:
                     "OS info": os_info,
                     "Policy name": policy_name,
                     "Protection Manager": protection_manager,
-                    "IP": ip_visionone
+                    "IP": ip_vision_one
                 }
                 invalid_fields = [key for key, value in fields.items() if value in ("", "N/A")]
                
@@ -116,7 +117,7 @@ class visionOne:
                         f"\t- AgentGuid: {agent_guid}\n"
                         f"\t- Login Account: {login_account}\n"
                         f"\t- Endpoint Name: {endpoint_name}\n"
-                        f"\t- IP: {ip_visionone}\n"
+                        f"\t- IP: {ip_vision_one}\n"
                         f"\t- OS info: {os_info}\n"
                         f"\t- Policy name: {policy_name}\n"
                         f"\t- Protection Manager: {protection_manager}\n"
@@ -138,10 +139,10 @@ class visionOne:
                 login_account_values = item.get("loginAccount", {}).get("value", "")
                 login_account = login_account_values[0].replace("\\", "/") if login_account_values else "N/A"
                 endpoint_name = item.get("endpointName", {}).get("value", "")
-                ip_visionone = item.get("ip", {}).get("value", "")
+                ip_vision_one = item.get("ip", {}).get("value", "")
                 
                 entry = (f"Risultato {idx}\n"
-                        f"\t- IP: {ip_visionone}\n"
+                        f"\t- IP: {ip_vision_one}\n"
                         f"\t- AgentGuid: {agent_guid}\n"
                         f"\t- Login Account: {login_account}\n"
                         f"\t- Nome Host: {endpoint_name}\n"   
@@ -159,22 +160,22 @@ class visionOne:
     
     #Methods available
 
-    def get_detailedInfoForEndpoint(self, agentID):      
+    def get_detailed_info_for_endpoint(self, agent_id):      
         '''
         API in TMV1 doc: Endpoint Security -> Get endpoint details
         '''
 
         exit_code = 0  #set 0 as default
 
-        url_path = '/v3.0/endpointSecurity/endpoints/'+ agentID
+        url_path = '/v3.0/endpointSecurity/endpoints/'+ agent_id
         
         query_params = {}
         headers = {
-                    'Authorization': 'Bearer ' + self.token,
+                    'Authorization': self.bearer + self.token,
                 }
 
         try:
-            r = requests.get(self.baseUrl + url_path, params=query_params, headers=headers, timeout=visionOne.timeout, proxies=self.proxy)
+            r = requests.get(self.base_url + url_path, params=query_params, headers=headers, timeout=VisionOne.timeout, proxies=self.proxy)
             result = self.parse_output(r)
             
             if (result[0] == 200):
@@ -193,14 +194,14 @@ class visionOne:
                 info = result[1]
         
         except Exception as e:
-            info = "Error getting info for endpoint with agentid " + agentID + "\n" + str(e) + "\n" + str(result)
+            info = "Error getting info for endpoint with agent_id " + agent_id + "\n" + str(e) + "\n" + str(result)
             exit_code = -1
              
                
         return [exit_code, info]
 
     #get infoFromIP  
-    def get_infoFromIP(self, ip):        
+    def get_info_from_ip(self, ip):        
         '''
         API in TMV1 doc: Search -> Get detailed endpoint list
         '''
@@ -214,19 +215,19 @@ class visionOne:
                     'top': 200
                     }
         headers = {
-                    'Authorization': 'Bearer ' + self.token,
+                    'Authorization': self.bearer + self.token,
                     'TMV1-Query': "{} eq '{}'".format(get_type, ip)
                 }
 
         try:
-            r = requests.get(self.baseUrl + url_path, params=query_params, headers=headers, timeout=visionOne.timeout, proxies=self.proxy)
+            r = requests.get(self.base_url + url_path, params=query_params, headers=headers, timeout=VisionOne.timeout, proxies=self.proxy)
             result = self.parse_output(r)
             
             if (result[0] == 200):
                 
                 #handle empty response
                 if (len(result[1].get("items")) > 0):
-                    info = self.__format_infoFromIP(result[1], "info")
+                    info = self.format_info_from_ip(result[1], "info")
                     exit_code = result[0]
                 else:
                     exit_code = 404
@@ -246,7 +247,7 @@ class visionOne:
 
     
     #get linksFromIP  
-    def get_linksFromIP(self, ip):        
+    def get_links_from_ip(self, ip):        
         '''
         API in TMV1 doc: Search -> Get detailed endpoint list
         '''
@@ -260,19 +261,19 @@ class visionOne:
                     'top': 200 
                     }
         headers = {
-                    'Authorization': 'Bearer ' + self.token,
+                    'Authorization': self.bearer + self.token,
                     'TMV1-Query': "{} eq '{}'".format(get_type, ip)
                 }
 
         try:
-            r = requests.get(self.baseUrl + url_path, params=query_params, headers=headers, timeout=visionOne.timeout, proxies=self.proxy)
+            r = requests.get(self.base_url + url_path, params=query_params, headers=headers, timeout=VisionOne.timeout, proxies=self.proxy)
             result = self.parse_output(r)
             
             if (result[0] == 200):
                 
                 #handle empty response
                 if (len(result[1].get("items")) > 0):
-                    info = self.__format_infoFromIP(result[1], "links")
+                    info = self.format_info_from_ip(result[1], "links")
                     exit_code = result[0]
                 else:
                     exit_code = 404
@@ -328,7 +329,7 @@ class visionOne:
     
     #Workbench change status
     
-    def get_workbench_etag(self, workbenchID):        
+    def get_workbench_etag(self, workbench_id):        
         '''
         API in TMV1 doc: Workbench -> Get alert details        
         
@@ -337,47 +338,47 @@ class visionOne:
         '''
         output_param = []
         url_path = '/v3.0/workbench/alerts/{id}'
-        url_path = url_path.format(**{'id': workbenchID})       
+        url_path = url_path.format(**{'id': workbench_id})       
 
         query_params = {}
         headers = {
-            'Authorization': 'Bearer ' + self.token,
+            'Authorization': self.bearer + self.token,
         }
         
         try:
-            r = requests.get(self.baseUrl + url_path, params=query_params, headers=headers, timeout=visionOne.timeout, proxies=self.proxy)
+            r = requests.get(self.base_url + url_path, params=query_params, headers=headers, timeout=VisionOne.timeout, proxies=self.proxy)
             
             etag = r.headers.get("ETag", "W/'Unknown'")[2:] #we need only the substring
             
             output_response_parsed = self.parse_output(r)
-            WB_link = output_response_parsed[1].get("workbenchLink","https://portal.eu.xdr.trendmicro.com/index.html#/workbench/alerts/" + workbenchID)
+            wb_link = output_response_parsed[1].get("workbenchLink","https://portal.eu.xdr.trendmicro.com/index.html#/workbench/alerts/" + workbench_id)
                     
         except Exception as e:
-            etag = "Error getting ETag for workbench {}: headers -> {}".format(workbenchID, r.headers)
-            WB_link = "https://portal.eu.xdr.trendmicro.com/index.html#/workbench/alerts/" + workbenchID
+            etag = "Error getting ETag for workbench {}: headers -> {}".format(workbench_id, r.headers)
+            wb_link = "https://portal.eu.xdr.trendmicro.com/index.html#/workbench/alerts/" + workbench_id
 
 
         output_param.append(etag)
-        output_param.append(WB_link)
+        output_param.append(wb_link)
 
         return output_param
 
-    def workbench_change_status(self, workbenchID, status):        
+    def workbench_change_status(self, workbench_id, status):        
         '''
         API in TMV1 doc: Workbench -> Modify alert status        
         '''
         
         url_path = '/v3.0/workbench/alerts/{id}'
-        url_path = url_path.format(**{'id': workbenchID})
+        url_path = url_path.format(**{'id': workbench_id})
 
-        buff = self.get_workbench_etag(workbenchID)
+        buff = self.get_workbench_etag(workbench_id)
         etag = buff[0]
         wb_link = buff[1]
            
 
         query_params = {}
         headers = {
-            'Authorization': 'Bearer ' + self.token,
+            'Authorization': self.bearer + self.token,
             'Content-Type': 'application/json;charset=utf-8',
             'If-Match': etag
         }
@@ -387,12 +388,12 @@ class visionOne:
         }
 
         try:
-            r = requests.patch(self.baseUrl + url_path, params=query_params, headers=headers, json=body, timeout=visionOne.timeout, proxies=self.proxy)
+            r = requests.patch(self.base_url + url_path, params=query_params, headers=headers, json=body, timeout=VisionOne.timeout, proxies=self.proxy)
             result = self.parse_output(r)
             
             if (result[0] == 204):                
                 #handle correct but empty response
-                info = "Vision One Workbench {} status changed to {}\n\nWorkbench link: <a href='{}' target='_blank'>Link</a>".format(workbenchID, status, wb_link)
+                info = "Vision One Workbench {} status changed to {}\n\nWorkbench link: <a href='{}' target='_blank'>Link</a>".format(workbench_id, status, wb_link)
                 exit_code = result[0]
                 
             else:
@@ -400,15 +401,15 @@ class visionOne:
                 info = result[1] + "\n\nWorkbench link: {}".format(wb_link)
         
         except Exception as e:
-            info = "Error updating workbench {} status to {}\n\nWorkbench link: {}".format(workbenchID, status, wb_link)
+            info = "Error updating workbench {} status to {}\n\nWorkbench link: {}".format(workbench_id, status, wb_link)
             exit_code = -1            
                
         return [exit_code, info]
 
 
-    def inProgess_workbench(self, workbenchID):
-        return self.workbench_change_status(workbenchID, "In Progress")
+    def in_progess_workbench(self, workbench_id):
+        return self.workbench_change_status(workbench_id, "In Progress")
 
-    def close_workbench(self, workbenchID):
-        return self.workbench_change_status(workbenchID, "Closed")
+    def close_workbench(self, workbench_id):
+        return self.workbench_change_status(workbench_id, "Closed")
     
